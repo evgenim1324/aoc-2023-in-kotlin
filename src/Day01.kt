@@ -6,8 +6,10 @@ fun main() {
     }
 
     fun String.findFirstDigit(): Char {
-        fun isSubstring(digitAsString: String, startIndex: Int) =
-            digitAsString.let { startIndex + it.length <= this.length && this.substring(startIndex, startIndex + it.length) == it }
+        fun isSubstring(digitAsString: String, startIndex: Int): Boolean {
+            val end = startIndex + digitAsString.length
+            return end <= this.length && this.substring(startIndex, end) == digitAsString
+        }
 
         for (i in this.indices) {
             val c = this[i]
@@ -36,8 +38,10 @@ fun main() {
     }
 
     fun String.findLastDigit(): Char {
-        fun isSubstring(digitAsString: String, endIndex: Int) =
-            digitAsString.let { endIndex + 1 - digitAsString.length >=0 && this.substring(endIndex + 1 - digitAsString.length, endIndex + 1) == it }
+        fun isSubstring(digitAsString: String, endIndex: Int): Boolean {
+            val start = endIndex + 1 - digitAsString.length
+            return start >=0 && this.substring(endIndex + 1 - digitAsString.length, endIndex + 1) == digitAsString
+        }
 
         for (i in this.lastIndex downTo 0) {
             val c = this[i]
