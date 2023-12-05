@@ -1,17 +1,10 @@
 
 fun main() {
 
-    fun getNumbers(numbers: String): Sequence<Int> {
-        return numbers.split(' ').asSequence()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .map { Integer.parseInt(it) }
-    }
-
-    fun getWinningNumbers(line: String): List<Int> {
+    fun getWinningNumbers(line: String): List<Long> {
         val (winningNumbersString, cardNumbersString) = line.split(':')[1].split('|')
-        val winningNumbers = getNumbers(winningNumbersString).toSet()
-        return getNumbers(cardNumbersString).filter { winningNumbers.contains(it) }.toList()
+        val winningNumbers = winningNumbersString.readNumbers().toSet()
+        return cardNumbersString.readNumbers().filter { winningNumbers.contains(it) }.toList()
     }
 
     fun part1(input: List<String>): Int {
