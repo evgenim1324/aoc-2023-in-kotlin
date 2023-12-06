@@ -1,8 +1,118 @@
-import java.util.TreeMap
-
 fun main() {
 
-    fun readAlmanac(input: List<String>): Array<Pair<String, TreeMap<Long, Pair<Long, Long>>>> {
+    class AlmanacRecord(
+        val source: Long,
+        val destination: Long,
+        val length: Long
+    ) {
+        fun inRange(value: Long) = value in source ..< source + length
+
+        fun inRange(value: LongRange): Boolean {
+            val range = source ..< source + length
+            return value.first in range || value.last in range
+        }
+
+        fun map(point: Long) = destination + (point - source)
+
+        fun project(point: LongRange): LongRange  {
+            val start = if (point.first < source) source else point.first
+            val end = if (point.last < source + length) point.last else source + length - 1
+
+            return start .. end
+        }
+
+        fun map(point: LongRange): LongRange {
+            return map(point.first) .. map(point.last)
+        }
+
+        fun map(): LongRange {
+            return map(destination) .. map(destination + length - 1)
+        }
+    }
+
+    class AlmanacSection(
+        val title: String,
+        val records: List<AlmanacRecord>
+    ) {
+
+        fun mapToDestination(source: Long): Long {
+            val searchResult = records.binarySearchBy(key = source, selector = AlmanacRecord::source)
+            if (searchResult >= 0) return records[searchResult].map(source)
+            if (searchResult == -1) return source
+            val closestRecord = records[-(searchResult + 2)]
+            if (closestRecord.inRange(source)) return closestRecord.map(source)
+
+            return source
+        }
+
+        fun mapToDestination(source: LongRange): List<LongRange> {
+            val searchResult = records.binarySearchBy(key = source.first, selector = AlmanacRecord::source)
+            val applicableRules = buildList {
+                var ruleIndex = records.let {
+                    if (searchResult >= 0) return@let searchResult
+                    if (searchResult == -1) return@let 0
+                    return@let -(searchResult + 2)
+                }
+
+                while (ruleIndex < records.size) {
+                    val record = records[ruleIndex]
+                    if (!records[ruleIndex].inRange(source)) break
+
+                    add(record)
+
+                    ruleIndex++
+                }
+            }
+
+            if (applicableRules.isEmpty()) return listOf(source)
+
+            return buildList {
+                var prevRule = applicableRules[0]
+
+                if (source.first < prevRule.source) {
+                    add(source.first ..< prevRule.source)
+                }
+
+                for (i in 1..applicableRules.lastIndex) {
+                    add(prevRule.map())
+
+                    val rule = applicableRules[i]
+                    if (rule.source - prevRule.source + prevRule.length > 0) {
+                        add((prevRule.source + prevRule.length)..<rule.source)
+                    }
+
+                    prevRule = rule
+                }
+
+                add(prevRule.map(prevRule.project(source)))
+
+                val prevLast = prevRule.source + prevRule.length - 1
+                if (source.last > prevLast) {
+                    add(prevLast .. source.last)
+                }
+            }
+        }
+    }
+
+    fun Array<AlmanacSection>.mapFromSeedToLocation(seed: Long): Long {
+        var location = seed
+        for (section in this) {
+            location = section.mapToDestination(location)
+        }
+
+        return location
+    }
+
+    fun Array<AlmanacSection>.mapFromSeedToLocation(seed: LongRange): List<LongRange> {
+        var location = listOf(seed)
+        for (section in this) {
+            location = location.flatMap { section.mapToDestination(it) }
+        }
+
+        return location
+    }
+
+    fun readAlmanac(input: List<String>): Array<AlmanacSection> {
         var linePointer = 2
         fun checkHeader(title: String) {
             if (linePointer >= input.size) throw IllegalArgumentException("Title $title not found !")
@@ -10,116 +120,40 @@ fun main() {
             linePointer++
         }
 
-        fun TreeMap<Long, Pair<Long, Long>>.readTableLines() {
-            var line = input[linePointer]
-            while (line.isNotBlank()) {
-                val numbers = line.readNumbers().toList()
-                this[numbers[1]] = numbers[0] to numbers[2]
+        fun readTableLines(): List<AlmanacRecord> {
+            return buildList {
+                var line = input[linePointer]
+                while (line.isNotBlank()) {
+                    val numbers = line.readNumbers().toList()
+                    add(AlmanacRecord(numbers[1], numbers[0], numbers[2]))
 
+                    linePointer++
+                    if (linePointer >= input.size) break
+
+                    line = input[linePointer]
+                }
+            }.sortedBy(AlmanacRecord::source).also {
                 linePointer++
-                if (linePointer >= input.size) return
-
-                line = input[linePointer]
             }
-
-            linePointer++
         }
 
         val maps = arrayOf(
-            "seed-to-soil map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "soil-to-fertilizer map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "fertilizer-to-water map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "water-to-light map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "light-to-temperature map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "temperature-to-humidity map:" to TreeMap<Long, Pair<Long, Long>>(),
-            "humidity-to-location map:" to TreeMap<Long, Pair<Long, Long>>(),
+            "seed-to-soil map:",
+            "soil-to-fertilizer map:",
+            "fertilizer-to-water map:",
+            "water-to-light map:",
+            "light-to-temperature map:",
+            "temperature-to-humidity map:",
+            "humidity-to-location map:",
         )
 
-        for ((title, map) in maps) {
+        return Array(maps.size) {
+            val title = maps[it]
             checkHeader(title)
-            map.readTableLines()
+            AlmanacSection(title.split(' ')[0], readTableLines())
         }
-
-        return maps
     }
 
-    fun Map.Entry<Long, Pair<Long, Long>>.sourceRange(): LongRange {
-        val (source, destinationData) = this
-        val (_, length) = destinationData
-
-        return source ..< source + length
-    }
-
-    fun LongRange.translateSeedRange(entry: Map.Entry<Long, Pair<Long, Long>>): LongRange {
-        val (source, destinationData) = entry
-        val (destination, _) = destinationData
-
-        val firstInDestination = destination + (this.first - source)
-
-        return firstInDestination.. firstInDestination + (this.last - this.first)
-    }
-
-    fun TreeMap<Long, Pair<Long, Long>>.mapItem(item: LongRange): List<LongRange> {
-        val points = mutableListOf<LongRange>()
-        var range: LongRange? = item
-        while (range != null) {
-            val floorEntry = this.floorEntry(range.first)
-            val floorRange = floorEntry?.sourceRange()
-            if (floorRange == null || !floorRange.contains(range.first)) {
-                val ceilingEntry = this.ceilingEntry(range.first)
-                if (ceilingEntry == null) {
-                    points.add(range)
-                    range = null
-                    continue
-                }
-
-                val ceilingRange = ceilingEntry.sourceRange()
-                if (!ceilingRange.contains(range.last)) {
-                    points.add(range)
-                    range = null
-                    continue
-                }
-
-                points.add(range.first..< ceilingRange.first)
-                range = ceilingRange.first .. range.last
-                continue
-            }
-
-            if (floorRange.contains(range.last)) {
-                points.add(range.translateSeedRange(floorEntry))
-                range = null
-                continue
-            }
-
-            val ceilingEntry = this.ceilingEntry(range.first)
-            if (ceilingEntry == null)  {
-                points.add((range.first  .. floorRange.last).translateSeedRange(floorEntry))
-                range = floorRange.last + 1 .. range.last
-                continue
-            }
-
-            val ceilingRange = ceilingEntry.sourceRange()
-            if (ceilingRange.contains(range.last)) {
-                points.add((range.first  ..< ceilingRange.first).translateSeedRange(floorEntry))
-                range = ceilingRange.first .. range.last
-                continue
-            }
-
-            points.add((range.first  .. floorRange.last).translateSeedRange(floorEntry))
-            range = floorRange.last + 1 .. range.last
-        }
-
-        return points
-    }
-
-    fun Array<Pair<String, TreeMap<Long, Pair<Long, Long>>>>.mapFromSeedToLocation(seed: LongRange): List<LongRange> {
-        var item = listOf(seed)
-        for ((_, map) in this) {
-            item = item.flatMap { map.mapItem(it) }.toList()
-        }
-
-        return item
-    }
 
     fun part1(input: List<String>): Int {
         val seeds = input[0].substring(6).readNumbers()
@@ -127,7 +161,7 @@ fun main() {
 
         val maps = readAlmanac(input)
 
-        return seeds.map { maps.mapFromSeedToLocation(it .. it).asSequence().map { it.first }.min() }.min().toInt()
+        return seeds.map { maps.mapFromSeedToLocation(it) }.min().toInt()
     }
 
     fun part2(input: List<String>): Int {
