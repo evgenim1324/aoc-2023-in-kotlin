@@ -1,3 +1,4 @@
+import java.lang.Long.parseLong
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.sqrt
@@ -13,11 +14,11 @@ fun main() {
     }
 
     class Race(
-        val time: Int,
-        val distance: Int
+        val time: Long,
+        val distance: Long
     ) {
         fun getNumberOfWays(): Int {
-            val determinant = (time * time - 4 * distance).toDouble()
+            val determinant = time * time.toDouble() - 4 * distance
 
             val root1 = (time - sqrt(determinant)) / 2
             val root2 = (time + sqrt(determinant)) / 2
@@ -29,7 +30,14 @@ fun main() {
     fun List<String>.getRaces(): Sequence<Race> {
         return this[0].removePrefix("Time:").readNumbers().zip(
             this[1].removePrefix("Distance:").readNumbers()
-        ) { v1, v2 -> Race(v1.toInt(), v2.toInt()) }
+        ) { v1, v2 -> Race(v1, v2) }
+    }
+
+    fun List<String>.readRace(): Race {
+        return Race(
+            parseLong(this[0].removePrefix("Time:").filter { it != ' ' }),
+            parseLong(this[1].removePrefix("Distance:").filter { it != ' ' })
+        )
     }
 
     fun part1(input: List<String>): Int {
@@ -37,12 +45,13 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        return input.readRace().getNumberOfWays()
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day06_test")
-    check(part1(testInput) == 288)
+//    check(part1(testInput) == 288)
+    check(part2(testInput) == 71503)
 
     val input = readInput("Day06")
     part1(input).println()
