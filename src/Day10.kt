@@ -1,5 +1,5 @@
 
-class Field(private val board: List<MutableList<Char>>) {
+class Field(private val board: List<String>) {
     fun findTheStartingPoint(): MazePipe {
         for (i in board.indices) {
             for ((j, c) in board[i].withIndex()) {
@@ -113,7 +113,7 @@ fun main() {
 
     fun part1(input: List<String>): Int {
         var counter = 0
-        with(Field(input.map { it.toMutableList() })) {
+        with(Field(input)) {
             val start = findTheStartingPoint()
             var pipe = start
             do {
@@ -132,52 +132,41 @@ fun main() {
 
     fun MazePipe.toSearchPoint() = SearchPoint(x, y)
 
+    fun addBoundary(prev: MazePipe, pipe: MazePipe, path: MutableMap<SearchPoint, Boolean>) {
+        path[pipe.toSearchPoint()] = (pipe is PipeDown) ||
+                (prev is PipeUp && pipe is PipeUp) ||
+                (prev is PipeUp && pipe is PipeLeft) ||
+                (prev is PipeUp && pipe is PipeRight)
+    }
+
     fun part2(input: List<String>): Int {
-        val cyclePoints = mutableMapOf<SearchPoint, MazePipe>()
-        val board = input.map { it.toMutableList() }
-        with(Field(board)) {
-            var pipe = findTheStartingPoint()
-            val start = pipe
+        val path = mutableMapOf<SearchPoint, Boolean>()
+        with(Field(input)) {
+            val start = findTheStartingPoint()
+            var prev = start
+            var pipe = start.next()
+
             do {
-                cyclePoints[pipe.toSearchPoint()] = pipe
+                addBoundary(prev, pipe, path)
+                prev = pipe
                 pipe = pipe.next()
             } while (pipe != start)
+
+            addBoundary(prev, start, path)
         }
 
         var counter = 0
-
         for (i in input.indices) {
-            var counting = false
+            var bourders = 0
             for (j in input[i].indices) {
-
-                val pipe = cyclePoints[SearchPoint(i, j)]
+                val pipe = path[SearchPoint(i, j)]
                 if (pipe == null) {
-                    print('*')
-                    if (counting) counter++
+                    if (bourders % 2 != 0) counter++
                     continue
                 }
 
-                when(pipe) {
-                    is StartingPoint -> print('8')
-                    is PipeUp -> {
-                        print('↑')
-                        counting = !counting
-                    }
-                    is PipeLeft -> {
-                        print('←')
-                        counting = !counting
-                    }
-                    is PipeDown -> {
-                        print('↓')
-                        counting = !counting
-                    }
-                    is PipeRight -> {
-                        print('→')
-                        counting = !counting
-                    }
-                }
+                if (pipe) bourders++
             }
-            println()
         }
 
         return counter
@@ -186,7 +175,7 @@ fun main() {
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day10_test")
     check(part1(testInput) == 8)
-//    check(part2(readInput("Day10_test2")) == 10)
+    check(part2(readInput("Day10_test2")) == 10)
 
     val input = readInput("Day10")
     part1(input).println()
