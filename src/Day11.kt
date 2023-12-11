@@ -1,22 +1,22 @@
 import kotlin.math.abs
 
-class Galaxy(var x: Int, var y: Int) {
+class Galaxy(var x: Long, var y: Long) {
     fun distance(galaxy: Galaxy) = abs(this.x - galaxy.x) + abs(this.y - galaxy.y)
 }
-fun main() {
-    fun IntArray.expand() {
-        var counter = 0
-        for ((index, value) in this.withIndex()) {
-            if (value == 0) counter++
-            this[index] = counter
 
-            counter++
+fun main() {
+    fun LongArray.expand(expansion: Int) {
+        var counter = 0L
+        for ((index, value) in this.withIndex()) {
+            counter += if (value == 0L) expansion else 1
+
+            this[index] = counter
         }
     }
 
-    fun part1(input: List<String>): Int {
-        val columns = IntArray(input[0].length)
-        val lines = IntArray(input.size)
+    fun theUniverse(input: List<String>, expansion: Int): MutableList<Galaxy> {
+        val columns = LongArray(input[0].length)
+        val lines = LongArray(input.size)
 
         val galaxies = mutableListOf<Galaxy>()
 
@@ -24,39 +24,42 @@ fun main() {
             val row = input[i]
             for (j in row.indices) {
                 if (row[j] == '#') {
-                    galaxies.add(Galaxy(i, j))
+                    galaxies.add(Galaxy(i.toLong(), j.toLong()))
                     lines[i]++
                     columns[j]++
                 }
             }
         }
 
-        columns.expand()
-        lines.expand()
+        columns.expand(expansion)
+        lines.expand(expansion)
 
         for (galaxy in galaxies) {
-            galaxy.x = lines[galaxy.x]
-            galaxy.y = columns[galaxy.y]
+            galaxy.x = lines[galaxy.x.toInt()]
+            galaxy.y = columns[galaxy.y.toInt()]
         }
+        return galaxies
+    }
 
-        var totalSum = 0
+    fun partOneAndTwo(input: List<String>, expansion: Int = 2): Long {
+        val galaxies = theUniverse(input, expansion)
+
+        var totalSum = 0L
         while (galaxies.isNotEmpty()) {
             val galaxy = galaxies.removeLast()
-            totalSum+= galaxies.map { it.distance(galaxy) }.sum()
+            totalSum+= galaxies.sumOf { it.distance(galaxy) }
         }
 
         return totalSum
     }
 
-    fun part2(input: List<String>): Int {
-        return input.size
-    }
-
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day11_test")
-    check(part1(testInput) == 374)
+    check(partOneAndTwo(testInput) == 374L)
+    check(partOneAndTwo(testInput, 10) == 1030L)
+    check(partOneAndTwo(testInput, 100) == 8410L)
 
     val input = readInput("Day11")
-    part1(input).println()
-    part2(input).println()
+    partOneAndTwo(input).println()
+    partOneAndTwo(input, 1_000_000).println()
 }
