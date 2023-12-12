@@ -1,97 +1,93 @@
 fun main() {
-    fun String.arrangements(): Int {
-        val (spring, condition) = this.split(' ')
-        val records = condition.split(',').map { it.toInt() }
-
-        val permutations = mutableListOf(StringBuilder())
-        var builder = permutations[0]
-
-        fun getValidArrangements(current: Char, springNextPosition: Int, record: Int, recordNextPosition: Int): Int {
+    fun arrangements(spring: String, mask: String): Int {
+        fun getValidArrangements(current: Char, springNextPosition: Int, maskPosition: Int): Int {
             if (current == '?') {
-                val subString = builder.toString()
-                val result1 = getValidArrangements('#', springNextPosition, record, recordNextPosition)
-
-                builder = StringBuilder()
-                builder.append(subString)
-                permutations.add(builder)
-                val result2 = getValidArrangements('.', springNextPosition, record, recordNextPosition)
+                val result1 = getValidArrangements('#', springNextPosition, maskPosition)
+                val result2 = getValidArrangements('.', springNextPosition, maskPosition)
 
                 return result1 + result2
             }
 
             val nextChar = if (springNextPosition >= spring.length) null else spring[springNextPosition]
+            val maskItem = if (maskPosition >= mask.length) null else mask[maskPosition]
+
             if (current == '.') {
-                builder.append(current)
-                if (record == -1) {
+                if (maskItem == null) {
+                    if (nextChar == null) return 1
+
+                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
+                }
+
+                if (maskItem == '.') {
                     if (nextChar == null) return 0
 
-                    return getValidArrangements(nextChar, springNextPosition + 1, 0, recordNextPosition)
+                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
                 }
 
-                if (record != 0) return 0
-                if (nextChar == null) {
-                    return if (recordNextPosition >= records.size) 1.also { println(builder.toString()) } else 0
+                if (maskItem == '#') {
+                    if (nextChar == null) return 0
+
+                    if (maskPosition == 0 || mask[maskPosition - 1] == '.' ) {
+                        return getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
+                    }
+
+                    return 0
                 }
 
-                return getValidArrangements(nextChar, springNextPosition + 1, record, recordNextPosition)
+                throw IllegalArgumentException()
             }
 
             if (current == '#') {
-                builder.append(current)
-//                if (record == 0) return 0
+                if (maskItem == null || maskItem == '.') return 0
+                if (maskItem == '#') {
+                    if (nextChar == null) {
+                        if (maskPosition == mask.lastIndex) return 1
 
-                if (nextChar == null ) {
-                    if ((record == 1 && recordNextPosition >= records.size)) {
-                        return 1
+                        return 0
                     }
 
-                    val nextRecord = if (recordNextPosition >= records.size) null else {
-                        val stri = builder.toString()
-                        if (stri.length > 1 && stri[stri.length - 2] != '.') return 0
-                        records[recordNextPosition]
-                    }
-
-                    return if ((nextRecord == 1 && recordNextPosition == records.lastIndex )) 1.also { println(builder.toString()) } else 0
+                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
                 }
 
-                if (record > 0) {
-                    return getValidArrangements(nextChar, springNextPosition + 1, record - 1, recordNextPosition)
-                }
-
-
-                val nextRecord = if (recordNextPosition >= records.size) null else {
-                    val stri = builder.toString()
-                    if (stri.length > 1 && stri[stri.length - 2] != '.') return 0
-                    records[recordNextPosition]
-                }
-                if (nextRecord == null) return 0
-
-
-                return getValidArrangements(nextChar, springNextPosition + 1, nextRecord - 1, recordNextPosition + 1)
+                throw IllegalArgumentException()
             }
 
             throw IllegalArgumentException("Unexpected character $current : $springNextPosition")
         }
 
-        return getValidArrangements(spring[0], 1, 0, 0)
+        return getValidArrangements(spring[0], 1, 0)
     }
+
+
+    fun String.mask() = this.split(',').asSequence().map { it.toInt() }
+            .map { (1..it).fold(StringBuilder()) { acc, _ ->  acc.append('#') }.toString() }
+            .joinToString(".")
 
     fun part1(input: List<String>): Int {
         return input.sumOf {
-            var arr = it.arrangements()
+            val (spring, condition) = it.split(' ')
+            var arr = arrangements(spring, condition.mask())
             arr
         }
     }
 
+    fun String.unfold(separator: String) = (1..5).asSequence().map { this }.joinToString(separator)
+
     fun part2(input: List<String>): Int {
-        return input.size
+        return input.sumOf {
+            val (spring, condition) = it.split(' ')
+            arrangements(spring.unfold("?"), condition.unfold(",").mask())
+        }
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day12_test")
     check(part1(testInput) == 21)
+    check(part2(testInput) == 525152)
 
     val input = readInput("Day12")
+    check(part1(input) == 6981)
+
     part1(input).println()
-    part2(input).println()
+    //part2(input).println()
 }
