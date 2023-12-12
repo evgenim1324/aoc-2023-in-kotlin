@@ -1,11 +1,20 @@
 fun main() {
-    fun arrangements(spring: String, mask: String): Int {
-        fun getValidArrangements(current: Char, springNextPosition: Int, maskPosition: Int): Int {
+    fun arrangements(spring: String, mask: String): Long {
+        val cache = mutableMapOf<String, Long>()
+
+        fun withCaching(arg: String, perform: () -> Long): Long {
+            return cache.getOrPut(arg) {
+                perform()
+            }
+        }
+
+        fun getValidArrangements(current: Char, springNextPosition: Int, maskPosition: Int): Long = withCaching("call $current $springNextPosition $maskPosition") {
+//            println("call $current $springNextPosition $maskPosition")
             if (current == '?') {
                 val result1 = getValidArrangements('#', springNextPosition, maskPosition)
                 val result2 = getValidArrangements('.', springNextPosition, maskPosition)
 
-                return result1 + result2
+                return@withCaching result1 + result2
             }
 
             val nextChar = if (springNextPosition >= spring.length) null else spring[springNextPosition]
@@ -13,40 +22,40 @@ fun main() {
 
             if (current == '.') {
                 if (maskItem == null) {
-                    if (nextChar == null) return 1
+                    if (nextChar == null) return@withCaching 1
 
-                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
+                    return@withCaching getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
                 }
 
                 if (maskItem == '.') {
-                    if (nextChar == null) return 0
+                    if (nextChar == null) return@withCaching 0
 
-                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
+                    return@withCaching getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
                 }
 
                 if (maskItem == '#') {
-                    if (nextChar == null) return 0
+                    if (nextChar == null) return@withCaching 0
 
                     if (maskPosition == 0 || mask[maskPosition - 1] == '.' ) {
-                        return getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
+                        return@withCaching getValidArrangements(nextChar, springNextPosition + 1, maskPosition)
                     }
 
-                    return 0
+                    return@withCaching 0
                 }
 
                 throw IllegalArgumentException()
             }
 
             if (current == '#') {
-                if (maskItem == null || maskItem == '.') return 0
+                if (maskItem == null || maskItem == '.') return@withCaching 0
                 if (maskItem == '#') {
                     if (nextChar == null) {
-                        if (maskPosition == mask.lastIndex) return 1
+                        if (maskPosition == mask.lastIndex) return@withCaching 1
 
-                        return 0
+                        return@withCaching 0
                     }
 
-                    return getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
+                    return@withCaching getValidArrangements(nextChar, springNextPosition + 1, maskPosition + 1)
                 }
 
                 throw IllegalArgumentException()
@@ -63,7 +72,7 @@ fun main() {
             .map { (1..it).fold(StringBuilder()) { acc, _ ->  acc.append('#') }.toString() }
             .joinToString(".")
 
-    fun part1(input: List<String>): Int {
+    fun part1(input: List<String>): Long {
         return input.sumOf {
             val (spring, condition) = it.split(' ')
             var arr = arrangements(spring, condition.mask())
@@ -73,7 +82,7 @@ fun main() {
 
     fun String.unfold(separator: String) = (1..5).asSequence().map { this }.joinToString(separator)
 
-    fun part2(input: List<String>): Int {
+    fun part2(input: List<String>): Long {
         return input.sumOf {
             val (spring, condition) = it.split(' ')
             arrangements(spring.unfold("?"), condition.unfold(",").mask())
@@ -82,12 +91,11 @@ fun main() {
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day12_test")
-    check(part1(testInput) == 21)
-    check(part2(testInput) == 525152)
+
+    check(part1(testInput) == 21L)
+    check(part2(testInput) == 525152L)
 
     val input = readInput("Day12")
-    check(part1(input) == 6981)
-
     part1(input).println()
-    //part2(input).println()
+    part2(input).println()
 }
