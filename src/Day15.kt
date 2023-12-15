@@ -26,15 +26,67 @@ fun main() {
         return input[0].split(',').sumOf { hashValue(it) }
     }
 
-    fun part2(input: List<String>): Int {
-        return input.size
+    class LavaMachineBox(
+        private val lenses: MutableMap<String, Int> = mutableMapOf(),
+    ) {
+        fun remove(len: String) {
+            lenses.remove(len)
+        }
+
+        fun addOrUpdate(len: String, focus: Int) {
+            lenses[len] = focus
+        }
+
+        fun focalFactor(): Long {
+            var factor = 0L
+
+            var counter = 1
+            for (focal in lenses.values) {
+                factor += counter * focal
+
+                counter++
+            }
+
+            return factor
+        }
+    }
+
+    fun part2(input: List<String>): Long {
+        val operations = input[0].split(',')
+
+        val boxes = mutableMapOf<Long, LavaMachineBox>()
+        for (op in operations) {
+            if (op.last() == '-') {
+                val len = op.substring(0, op.length - 1)
+                val boxNumber = hashValue(len)
+
+                val box = boxes.getOrPut(boxNumber) { LavaMachineBox() }
+                box.remove(len)
+            } else {
+                val (len, focus) = op.split('=')
+                val boxNumber = hashValue(len)
+
+                val box = boxes.getOrPut(boxNumber) { LavaMachineBox() }
+                box.addOrUpdate(len, focus.toInt())
+            }
+        }
+
+        var result = 0L
+        for ((key, value) in boxes) {
+            result+= (key.toInt() + 1) * value.focalFactor()
+        }
+
+        return result
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day15_test")
     check(part1(testInput) == 1320L)
+    check(part2(testInput) == 145L)
 
     val input = readInput("Day15")
+    check(part1(input) == 509784L)
+    check(part2(input) == 230197L)
     part1(input).println()
     part2(input).println()
 }
