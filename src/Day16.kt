@@ -1,3 +1,4 @@
+import kotlin.math.max
 
 class EnergyBoard(
     val input: List<String>
@@ -22,7 +23,7 @@ class EnergyBoard(
         return false
     }
 
-    private fun beamRight(x: Int, y: Int) {
+    fun beamRight(x: Int, y: Int) {
         if (visited("beamRight", x, y)) return
 
         var index = y
@@ -43,7 +44,7 @@ class EnergyBoard(
         }
     }
 
-    private fun beamLeft(x: Int, y: Int) {
+    fun beamLeft(x: Int, y: Int) {
         if (visited("beamLeft", x, y)) return
 
         var index = y
@@ -64,7 +65,7 @@ class EnergyBoard(
         }
     }
 
-    private fun beamDown(x: Int, y: Int) {
+    fun beamDown(x: Int, y: Int) {
         if (visited("beamDown", x, y)) return
 
         var index = x
@@ -85,7 +86,7 @@ class EnergyBoard(
         }
     }
 
-    private fun beamUp(x: Int, y: Int) {
+    fun beamUp(x: Int, y: Int) {
         if (visited("beamUp", x, y)) return
 
         var index = x
@@ -108,9 +109,7 @@ class EnergyBoard(
         }
     }
 
-    fun beam(): Int {
-        beamRight(0, -1)
-
+    fun energizedTotal(): Int {
         var counter = 0
         energyDiagram.forEach { it.forEach { if (it) counter++ } }
 
@@ -122,16 +121,42 @@ fun main() {
 
     fun part1(input: List<String>): Int {
         val board = EnergyBoard(input)
-        return board.beam()
+        board.beamRight(0, -1)
+        return board.energizedTotal()
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        var maxEnergized = (0..input.lastIndex).asSequence().map {
+            val board = EnergyBoard(input)
+            board.beamRight(it, -1)
+            board.energizedTotal()
+        }.max()
+
+        maxEnergized = max(maxEnergized,  (0..input.lastIndex).asSequence().map {
+            val board = EnergyBoard(input)
+            board.beamLeft(it, input[0].length)
+            board.energizedTotal()
+        }.max())
+
+        maxEnergized = max(maxEnergized,  (0..input[0].lastIndex).asSequence().map {
+            val board = EnergyBoard(input)
+            board.beamDown(-1, it)
+            board.energizedTotal()
+        }.max())
+
+        maxEnergized = max(maxEnergized,  (0..input[0].lastIndex).asSequence().map {
+            val board = EnergyBoard(input)
+            board.beamUp(input.size, it)
+            board.energizedTotal()
+        }.max())
+
+        return maxEnergized
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day16_test")
     check(part1(testInput) == 46)
+    check(part2(testInput) == 51)
 
     val input = readInput("Day16")
     part1(input).println()
