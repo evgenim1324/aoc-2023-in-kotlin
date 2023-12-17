@@ -126,12 +126,17 @@ fun main() {
 
         fun PathState.toPoint() = Point(x, y, direction, directionSteps)
 
-        val paths = PriorityQueue<PathState>(compareBy { it.heatLoss + distances[it.x][it.y] - input[it.x][it.y]})
+//        val paths = PriorityQueue<PathState>(compareBy { it.heatLoss + distances[it.x][it.y] - input[it.x][it.y]})
+
+        val paths = PriorityQueue<PathState>(compareBy<PathState> {
+            it.x + it.y
+        }.then(compareBy { it.heatLoss }))
+
         val passed = mutableMapOf<Point, PathState>()
 
-        fun addSteps(steps: Iterator<PathState>) {
-            while (steps.hasNext()) {
-                val stepToAdd = steps.next()
+        fun addSteps(steps: Sequence<PathState>) {
+            steps.forEach {
+                val stepToAdd = it
                 val pointToAdd = stepToAdd.toPoint()
 
                 val existingPoint = passed[pointToAdd]
@@ -142,34 +147,13 @@ fun main() {
             }
         }
 
-        fun PathState.next(): PathState? {
-            val state = this
-            when (direction) {
-                CrucibleDirection.RIGHT -> {
-                    val steps = sequenceOf(state.down(), state.right(), state.up()).filterNotNull().sortedBy { distances[it.x][it.y] }.iterator()
-                    if(!steps.hasNext()) return null
-
-                    return steps.next().also { addSteps(steps) }
-                }
-                CrucibleDirection.DOWN -> {
-                    val steps = sequenceOf(state.right(), state.down(), state.left()).filterNotNull().sortedBy { distances[it.x][it.y] }.iterator()
-                    if(!steps.hasNext()) return null
-
-                    return steps.next().also { addSteps(steps) }
-                }
-                CrucibleDirection.UP -> {
-                    val steps = sequenceOf(state.right(), state.up(), state.left()).filterNotNull().sortedBy { distances[it.x][it.y] }.iterator()
-                    if(!steps.hasNext()) return null
-
-                    return steps.next().also { addSteps(steps) }
-                }
-                CrucibleDirection.LEFT -> {
-                    val steps = sequenceOf(state.down(), state.up(), state.left()).filterNotNull().sortedBy { distances[it.x][it.y] }.iterator()
-                    if(!steps.hasNext()) return null
-
-                    return steps.next().also { addSteps(steps) }
-                }
-            }
+        fun PathState.addNext() {
+            addSteps(when (direction) {
+                CrucibleDirection.RIGHT -> sequenceOf(down(), right(), up())
+                CrucibleDirection.DOWN -> sequenceOf(right(), down(), left())
+                CrucibleDirection.UP -> sequenceOf(right(), up(), left())
+                CrucibleDirection.LEFT -> sequenceOf(down(), up(), left())
+            }.filterNotNull().sortedBy { distances[it.x][it.y] } )
         }
 
         fun PathState.isLastStep() = x == lastRow && y == lastColumn
@@ -178,15 +162,14 @@ fun main() {
         paths.add(PathState(0, 0, CrucibleDirection.RIGHT, 0, 0))
         do {
             var currentState: PathState? = paths.remove()
-            do {
-                //println(currentState)
-//                nodesChecked++
-                if (currentState!!.isLastStep()) {
-                    minHeatLoss = min(minHeatLoss, currentState.heatLoss)
-                    break
-                }
-                currentState = currentState.next()
-            } while (currentState != null)
+
+            //println(currentState)
+//            nodesChecked++
+            if (currentState!!.isLastStep()) {
+                minHeatLoss = min(minHeatLoss, currentState.heatLoss)
+            }
+
+            currentState.addNext()
         } while (paths.isNotEmpty())
 
         return minHeatLoss
@@ -201,6 +184,7 @@ fun main() {
     check(part1(testInput.toIntList()) == 102)
 
     val input = readInput("Day17")
+    check(part1(input.toIntList()) == 907)
     part1(input.toIntList()).println()
     part2(input).println()
 }
