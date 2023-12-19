@@ -74,8 +74,6 @@ fun main() {
         var i = 0
 
         val conditions = buildMap {
-            fun add(pair: Pair<String, Rule>) = put(pair.first, pair.second)
-
             while (i < input.size) {
                 val str = input[i]
                 if (str.isBlank()) {
@@ -83,7 +81,8 @@ fun main() {
                     break
                 }
 
-                add(str.readRule())
+                val (key, value) = str.readRule()
+                put(key, value)
                 i++
             }
         }
